@@ -11,18 +11,18 @@ abstracts every provider behind one interface.
 
 Pick **one** provider (you can add more later):
 
-### Anthropic (recommended — native model tiers)
-1. Create an account at https://console.anthropic.com
-2. Go to **Settings → API Keys → Create Key**
-3. Copy the key — it starts with `sk-ant-`
+### Google Gemini (recommended — native model tiers)
+1. Visit https://aistudio.google.com/apikey
+2. **Create API key** in a Google Cloud project
 
 ### OpenAI
 1. Create an account at https://platform.openai.com
 2. **Dashboard → API keys → Create new secret key** (starts with `sk-`)
 
-### Google Gemini
-1. Visit https://aistudio.google.com/apikey
-2. **Create API key** in a Google Cloud project
+### Anthropic
+1. Create an account at https://console.anthropic.com
+2. Go to **Settings → API Keys → Create Key**
+3. Copy the key — it starts with `sk-ant-`
 
 ### OpenRouter (one key, many models)
 1. Create an account at https://openrouter.ai
@@ -39,14 +39,14 @@ Create `backend/.env` (this path is for local development; add `.env` to
 
 ```dotenv
 # choose ONE provider block --------------------------------------------
-LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=sk-ant-...
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...
 
 # LLM_PROVIDER=openai
 # OPENAI_API_KEY=sk-...
 
-# LLM_PROVIDER=gemini
-# GEMINI_API_KEY=...
+# LLM_PROVIDER=anthropic
+# ANTHROPIC_API_KEY=sk-ant-...
 
 # LLM_PROVIDER=openrouter
 # OPENROUTER_API_KEY=sk-or-...
@@ -58,8 +58,8 @@ PROMPTINEERING_SECRET=change-me-to-a-long-random-string
 Or set them for the current PowerShell session before starting the backend:
 
 ```powershell
-$env:LLM_PROVIDER = "anthropic"
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
+$env:LLM_PROVIDER = "gemini"
+$env:GEMINI_API_KEY = "..."
 ```
 
 ## 3. How the backend uses the key
@@ -67,12 +67,13 @@ $env:ANTHROPIC_API_KEY = "sk-ant-..."
 1. `model_gateway.active_provider()` reads `LLM_PROVIDER`; if unset, it
    auto-detects the first provider whose key variable exists; if none, it
    serves the sandbox.
-2. The **model router** picks a Claude tier (`claude-haiku-4-5` /
-   `claude-sonnet-5` / `claude-opus-4-8`) from prompt complexity, constrained
-   by the active policy suite's `allowed_models`.
-3. For non-Anthropic providers the gateway maps that tier to an equivalent
-   model (e.g. `claude-sonnet-5 → gpt-4o` / `gemini-2.5-pro` /
-   `anthropic/claude-sonnet-5` on OpenRouter).
+2. The **model router** picks a Gemini tier (`gemini-3.5-flash-lite` /
+   `gemini-3.5-flash` / `gemini-3.6-flash`) from prompt complexity — or
+   honors the model the user selected in the workspace — constrained by the
+   active policy suite's `allowed_models`.
+3. For non-Gemini providers the gateway maps that tier to an equivalent
+   model (e.g. `gemini-3.5-flash → gpt-4o` / `claude-sonnet-5` /
+   `google/gemini-3.5-flash` on OpenRouter).
 4. The workspace's system prompt and the policy's response strictness are
    applied, the **compressed** prompt is sent, and the answer flows back
    through the output rails before reaching the UI.
@@ -96,7 +97,7 @@ npm run dev
 ## 5. Verify the full pipeline
 
 1. `GET http://127.0.0.1:8000/api/health` → confirm
-   `"provider": "anthropic"` (or your provider) instead of `"sandbox"`.
+   `"provider": "gemini"` (or your provider) instead of `"sandbox"`.
 2. Sign in at http://localhost:5173 and send a prompt. In the **System
    Intelligence** panel confirm:
    - the **LLM Inference** stage shows your provider as its engine,
@@ -116,7 +117,7 @@ npm run dev
 | `429` errors | Provider rate limit or no credit | Add billing/credits on the provider dashboard; retry later; route to a smaller tier via the policy's `allowed_models` |
 | CORS errors in the browser console | Frontend served from an origin the backend doesn't allow | In dev, always use http://localhost:5173 (the Vite proxy handles `/api`); for other origins add them to `allow_origins` in `backend/app/main.py` |
 | Key works in terminal but not the app | Key set in a different shell than the backend process | Set the variable in the same window that launches uvicorn, or use `backend/.env` |
-| NeMo self-check rail never runs | It requires `ANTHROPIC_API_KEY` + `nemoguardrails` installed + `self_check` enabled in the policy's rails config | Check `GET /api/health` → `engines.rails` |
+| NeMo self-check rail never runs | It requires `GEMINI_API_KEY` + `nemoguardrails` installed + `self_check` enabled in the policy's rails config | Check `GET /api/health` → `engines.rails` |
 | First request very slow with full engines | LLMLingua model downloading in the background | Wait for `llmlingua_state: "ready"` in `/api/health`; native engine serves meanwhile |
 
 ## 7. Production notes

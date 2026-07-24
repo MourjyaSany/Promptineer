@@ -13,7 +13,7 @@ from .models import (
     User, Violation,
 )
 
-ALL_MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8"]
+ALL_MODELS = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.6-flash"]
 ALL_FILE_TYPES = ["pdf", "docx", "txt", "md", "csv", "xlsx", "json", "xml",
                   "zip", "png", "jpg", "mp3", "mp4", "py", "java", "cpp",
                   "js", "ts", "html", "css", "sql"]

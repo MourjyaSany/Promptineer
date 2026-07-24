@@ -65,8 +65,8 @@ Notes:
   model (~700 MB) from Hugging Face **in a background thread**; requests are
   served by the native engine until it is ready. Check progress at
   `GET /api/health` → `engines.optimizer.llmlingua_state`.
-- NeMo Guardrails' LLM self-check rail additionally requires an
-  `ANTHROPIC_API_KEY` (see `AI_API_SETUP.md`); its pattern rails run regardless.
+- NeMo Guardrails' LLM self-check rail additionally requires a
+  `GEMINI_API_KEY` (see `AI_API_SETUP.md`); its pattern rails run regardless.
 - Set `PROMPTINEERING_DISABLE_LLMLINGUA=1` to force the native optimizer.
 
 ## 2. Frontend
@@ -120,8 +120,8 @@ see the difference.
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `LLM_PROVIDER` | `anthropic` \| `openai` \| `gemini` \| `openrouter` | auto-detect by key |
-| `ANTHROPIC_API_KEY` etc. | provider credentials | unset → governed sandbox |
+| `LLM_PROVIDER` | `gemini` \| `openai` \| `anthropic` \| `openrouter` | auto-detect by key |
+| `GEMINI_API_KEY` etc. | provider credentials | unset → governed sandbox |
 | `PROMPTINEERING_SECRET` | JWT signing secret | dev default (change in prod) |
 | `PROMPTINEERING_OFFLINE` | `1` forces the sandbox gateway | unset |
 | `PROMPTINEERING_DISABLE_LLMLINGUA` | `1` forces native optimizer | unset |

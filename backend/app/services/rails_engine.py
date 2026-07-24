@@ -30,8 +30,8 @@ _nemo_lock = threading.Lock()
 _NEMO_YAML = """
 models:
   - type: main
-    engine: anthropic
-    model: claude-haiku-4-5
+    engine: google_genai
+    model: gemini-3.5-flash-lite
 rails:
   input:
     flows:
@@ -56,7 +56,7 @@ prompts:
 
 
 def _get_nemo():
-    """Build the NeMo LLMRails runner once; needs an Anthropic key for the
+    """Build the NeMo LLMRails runner once; needs a Gemini key for the
     self-check input rail. Returns None when unavailable."""
     global _nemo_rails, _nemo_state
     if _nemo_state != "untried":
@@ -64,9 +64,14 @@ def _get_nemo():
     with _nemo_lock:
         if _nemo_state != "untried":
             return _nemo_rails
-        if not NEMO_AVAILABLE or not os.environ.get("ANTHROPIC_API_KEY"):
+        gemini_key = (os.environ.get("GEMINI_API_KEY")
+                      or os.environ.get("GOOGLE_API_KEY"))
+        if not NEMO_AVAILABLE or not gemini_key:
             _nemo_state = "unavailable"
             return None
+        # langchain-google-genai (used by NeMo's google_genai engine) reads
+        # GOOGLE_API_KEY, while the rest of the platform uses GEMINI_API_KEY
+        os.environ.setdefault("GOOGLE_API_KEY", gemini_key)
         try:
             from nemoguardrails import LLMRails, RailsConfig
             config = RailsConfig.from_content(yaml_content=_NEMO_YAML)

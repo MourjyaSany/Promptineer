@@ -17,7 +17,7 @@ User → Policy Engine → NeMo Guardrails → LLMLingua → Model Gateway → L
 
 - **Frontend** — React 19 · Vite · TypeScript · TailwindCSS 4 · Framer Motion · Zustand · React Router · react-markdown · Lucide (custom canvas dotted globe + SVG chart kit)
 - **Backend** — Python · FastAPI · SQLAlchemy · SQLite · JWT auth · RBAC · modular service layer (policy engine, rails engine, optimization, model gateway, file service)
-- **Engines (optional, graceful fallback)** — NVIDIA NeMo Guardrails · LLMLingua-2 (torch CPU) · Anthropic / OpenAI / Gemini / OpenRouter via one unified gateway
+- **Engines (optional, graceful fallback)** — NVIDIA NeMo Guardrails · LLMLingua-2 (torch CPU) · Gemini / OpenAI / Anthropic / OpenRouter via one unified gateway
 
 > Full setup: [SETUP.md](SETUP.md) · Provider keys: [AI_API_SETUP.md](AI_API_SETUP.md)
 
@@ -55,18 +55,21 @@ dashboard).
 (All non-admin seeded users use `demo123`. Each authority level sees a
 different, RBAC-filtered set of policy suites.)
 
-## Live Claude models (optional)
+## Live Gemini models (optional)
 
 Without credentials the platform runs in a **governed sandbox** — the full
 pipeline executes and a simulated response is returned. To route to live
-Claude models, set an API key before starting the backend:
+Gemini models, set an API key before starting the backend (or put it in
+`backend/.env`):
 
 ```powershell
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
+$env:GEMINI_API_KEY = "..."
 ```
 
-The router picks `claude-haiku-4-5` / `claude-sonnet-5` / `claude-opus-4-8`
-by prompt complexity, constrained by the active policy suite.
+The router picks `gemini-3.5-flash-lite` / `gemini-3.5-flash` /
+`gemini-3.6-flash` by prompt complexity — or you can pick a model directly
+from the dropdown in the workspace composer — constrained by the active
+policy suite.
 
 ## Try the guardrails
 
@@ -90,7 +93,7 @@ backend/app
     policy_engine.py  # effective-policy resolution & enforcement
     rails_engine.py   # NeMo Guardrails orchestration + explainability
     optimization.py   # LLMLingua-2 adapter (background warm-up, cost metrics)
-    model_gateway.py  # unified Anthropic/OpenAI/Gemini/OpenRouter gateway
+    model_gateway.py  # unified Gemini/OpenAI/Anthropic/OpenRouter gateway
     file_service.py   # validated, hashed, policy-limited uploads
   routers/            # auth, chat pipeline, files, admin (users/policies), analytics, audit
 frontend/src

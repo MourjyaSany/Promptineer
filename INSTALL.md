@@ -69,17 +69,17 @@ The platform runs fully **without any key** in "governed sandbox" mode
 2. Put your provider and key in it — pick **one** block:
 
    ```dotenv
-   # --- Anthropic (recommended) ---
-   LLM_PROVIDER=anthropic
-   ANTHROPIC_API_KEY=sk-ant-your-key-here
+   # --- Google Gemini (recommended) ---
+   LLM_PROVIDER=gemini
+   GEMINI_API_KEY=your-key-here
 
    # --- OR OpenAI ---
    # LLM_PROVIDER=openai
    # OPENAI_API_KEY=sk-your-key-here
 
-   # --- OR Google Gemini ---
-   # LLM_PROVIDER=gemini
-   # GEMINI_API_KEY=your-key-here
+   # --- OR Anthropic ---
+   # LLM_PROVIDER=anthropic
+   # ANTHROPIC_API_KEY=sk-ant-your-key-here
 
    # --- OR OpenRouter ---
    # LLM_PROVIDER=openrouter
@@ -91,9 +91,9 @@ The platform runs fully **without any key** in "governed sandbox" mode
 
 3. That's it. The backend loads `backend/.env` automatically at startup.
 
-**Where to get a key:** Anthropic → https://console.anthropic.com →
-Settings → API Keys · OpenAI → https://platform.openai.com → API keys ·
-Gemini → https://aistudio.google.com/apikey · OpenRouter →
+**Where to get a key:** Gemini → https://aistudio.google.com/apikey ·
+OpenAI → https://platform.openai.com → API keys · Anthropic →
+https://console.anthropic.com → Settings → API Keys · OpenRouter →
 https://openrouter.ai → Keys.
 
 **Security notes**
