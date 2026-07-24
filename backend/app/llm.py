@@ -1,33 +1,35 @@
-"""Model router and LLM gateway.
+"""Model router.
 
-Uses the Anthropic API when credentials are available (ANTHROPIC_API_KEY or an
-`ant auth login` profile); otherwise returns a deterministic simulated response
-so the platform is fully demonstrable offline.
+Native model tiers are Google Gemini (current GA lineup — no 2.5-era
+models). The unified gateway in services/model_gateway.py performs the
+actual inference; with no provider key configured the platform serves a
+deterministic simulated response so it stays fully demonstrable offline.
 """
-import os
-
 from .optimizer import estimate_tokens
 
-DEFAULT_MODEL = "claude-opus-4-8"
-MODEL_TIERS = ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-4-8"]
+DEFAULT_MODEL = "gemini-3.5-flash"
+# ordered least → most capable
+MODEL_TIERS = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.6-flash"]
 
-_client = None
-_client_checked = False
+# tier names stored by policies created before the Gemini migration
+LEGACY_MODEL_MAP = {
+    "claude-haiku-4-5": "gemini-3.5-flash-lite",
+    "claude-sonnet-5": "gemini-3.5-flash",
+    "claude-opus-4-8": "gemini-3.6-flash",
+}
 
 
-def _get_client():
-    global _client, _client_checked
-    if _client_checked:
-        return _client
-    _client_checked = True
-    if os.environ.get("PROMPTINEERING_OFFLINE") == "1":
+def normalize_model(name: str | None) -> str | None:
+    """Map legacy tier names onto the current Gemini lineup."""
+    if not name:
         return None
-    try:
-        import anthropic
-        _client = anthropic.Anthropic()
-    except Exception:
-        _client = None
-    return _client
+    return LEGACY_MODEL_MAP.get(name, name)
+
+
+def normalize_allowed(allowed_models: list | None) -> list[str]:
+    """Policy allow-list → valid current tiers (empty ⇒ all tiers)."""
+    allowed = [normalize_model(m) for m in (allowed_models or [])]
+    return [m for m in MODEL_TIERS if m in allowed] or list(MODEL_TIERS)
 
 
 def route_model(prompt: str, allowed_models: list | None) -> str:
@@ -35,12 +37,12 @@ def route_model(prompt: str, allowed_models: list | None) -> str:
     tokens = estimate_tokens(prompt)
     has_code = "```" in prompt or "def " in prompt or "function " in prompt
     if tokens > 400 or has_code:
-        preferred = "claude-opus-4-8"
+        preferred = "gemini-3.6-flash"
     elif tokens > 80:
-        preferred = "claude-sonnet-5"
+        preferred = "gemini-3.5-flash"
     else:
-        preferred = "claude-haiku-4-5"
-    allowed = [m for m in (allowed_models or []) if m in MODEL_TIERS] or MODEL_TIERS
+        preferred = "gemini-3.5-flash-lite"
+    allowed = normalize_allowed(allowed_models)
     if preferred in allowed:
         return preferred
     # fall back to the most capable allowed tier
@@ -48,39 +50,6 @@ def route_model(prompt: str, allowed_models: list | None) -> str:
         if model in allowed:
             return model
     return DEFAULT_MODEL
-
-
-def generate(prompt: str, model: str, application: str, max_tokens: int = 2048) -> dict:
-    client = _get_client()
-    if client is not None:
-        try:
-            response = client.messages.create(
-                model=model,
-                max_tokens=min(max_tokens, 8192),
-                system=(
-                    "You are Promptineering's governed enterprise assistant for the "
-                    f"'{application}' workspace. Answer in well-structured Markdown. "
-                    "Be precise and professional."
-                ),
-                messages=[{"role": "user", "content": prompt}],
-            )
-            text = "".join(b.text for b in response.content if b.type == "text")
-            return {
-                "text": text,
-                "model": response.model,
-                "tokens_out": response.usage.output_tokens,
-                "simulated": False,
-            }
-        except Exception:
-            pass  # fall through to the simulated gateway
-
-    text = _simulated_response(prompt, application, model)
-    return {
-        "text": text,
-        "model": f"{model} (governed sandbox)",
-        "tokens_out": estimate_tokens(text),
-        "simulated": True,
-    }
 
 
 def _simulated_response(prompt: str, application: str, model: str) -> str:
@@ -95,7 +64,7 @@ Your request — **“{topic}”** — was processed through the full Promptinee
 #### Key points
 
 1. **Scope confirmed.** The request falls within the active policy suite for the {domain} workspace, so no output restrictions were applied.
-2. **Grounded answer.** In a production deployment this response is produced by the routed Claude model with your enterprise context injected after sanitization.
+2. **Grounded answer.** In a production deployment this response is produced by the routed Gemini model with your enterprise context injected after sanitization.
 3. **Optimization applied.** Filler language was compressed and duplicate context removed before inference, reducing token spend without changing intent.
 
 | Check | Result |
@@ -104,7 +73,7 @@ Your request — **“{topic}”** — was processed through the full Promptinee
 | PII / secret leakage | ✅ None forwarded |
 | Output moderation | ✅ Clean |
 
-> **Note:** The platform is currently running in the *governed sandbox* mode — connect an Anthropic API key (`ANTHROPIC_API_KEY`) to route this workspace to live Claude models.
+> **Note:** The platform is currently running in the *governed sandbox* mode — connect a Gemini API key (`GEMINI_API_KEY` in `backend/.env`) to route this workspace to live Gemini models.
 
 ```text
 pipeline: injection → pii → secrets → compliance → optimization → router → {model}
