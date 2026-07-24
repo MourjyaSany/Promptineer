@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -18,9 +19,19 @@ app = FastAPI(
     version="2.0.0",
 )
 
+# Allowed browser origins. Local dev origins are always permitted; add your
+# deployed frontend via PROMPTINEERING_CORS_ORIGINS (comma-separated). Any
+# *.vercel.app origin (production + preview builds) is allowed by regex so a
+# Vercel deploy works with no extra config.
+_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+_extra_origins = [o.strip() for o in
+                  os.environ.get("PROMPTINEERING_CORS_ORIGINS", "").split(",")
+                  if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=_DEV_ORIGINS + _extra_origins,
+    allow_origin_regex=os.environ.get("PROMPTINEERING_CORS_REGEX",
+                                      r"https://.*\.vercel\.app"),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

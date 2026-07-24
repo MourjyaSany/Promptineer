@@ -1,5 +1,6 @@
 """Enterprise file service: validated, hashed, policy-limited uploads."""
 import hashlib
+import os
 import re
 import uuid
 from pathlib import Path
@@ -9,7 +10,11 @@ from sqlalchemy.orm import Session
 
 from ..models import UploadedFile, User, audit
 
-UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "uploads"
+# Writable upload root. Override with PROMPTINEERING_UPLOAD_DIR to point at a
+# mounted persistent disk (or an ephemeral path like /tmp on serverless hosts).
+UPLOAD_DIR = Path(os.environ.get(
+    "PROMPTINEERING_UPLOAD_DIR",
+    str(Path(__file__).resolve().parent.parent.parent / "uploads")))
 
 KIND_BY_EXT = {
     # documents

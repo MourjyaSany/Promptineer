@@ -22,7 +22,7 @@ User → Policy Engine → Rails (injection · jailbreak · Presidio PII · secr
 - **Backend** — Python · FastAPI · SQLAlchemy · SQLite · JWT auth · RBAC · modular service layer (policy engine, rails engine, optimization, model gateway, file service)
 - **Engines (optional, graceful fallback)** — NVIDIA NeMo Guardrails (Gemini-backed LLM self-check) · Microsoft Presidio PII masking (spaCy NER) · LLMLingua-2 (torch CPU) · Gemini / OpenAI / Anthropic / OpenRouter via one unified gateway
 
-> Full setup: [SETUP.md](SETUP.md) · Provider keys: [AI_API_SETUP.md](AI_API_SETUP.md)
+> Full setup: [SETUP.md](SETUP.md) · Provider keys: [AI_API_SETUP.md](AI_API_SETUP.md) · Deploy (Vercel + Render): [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## Run it
 

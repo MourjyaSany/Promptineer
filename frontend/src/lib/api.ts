@@ -1,5 +1,15 @@
 const TOKEN_KEY = 'promptineering.token'
 
+// Backend origin. Empty in dev (Vite proxies /api → :8000) and on Vercel when
+// the frontend and backend share a domain via a rewrite. Set VITE_API_BASE to
+// the deployed backend URL (e.g. https://promptineer-api.onrender.com) at
+// build time to call a cross-origin backend directly.
+const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/+$/, '')
+
+export function apiUrl(path: string) {
+  return `${API_BASE}${path}`
+}
+
 export function getToken() {
   return localStorage.getItem(TOKEN_KEY)
 }
@@ -23,7 +33,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   const token = getToken()
   if (token) headers.Authorization = `Bearer ${token}`
-  const res = await fetch(path, { ...options, headers })
+  const res = await fetch(apiUrl(path), { ...options, headers })
   if (!res.ok) {
     let detail = res.statusText
     try {
@@ -68,7 +78,7 @@ export function uploadFiles(
     const form = new FormData()
     files.forEach((f) => form.append('files', f))
     form.append('application', application)
-    xhr.open('POST', '/api/files/upload')
+    xhr.open('POST', apiUrl('/api/files/upload'))
     const token = getToken()
     if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.upload.onprogress = (e) => {
@@ -91,7 +101,7 @@ export function uploadFiles(
 
 export function downloadFileUrl(id: number) {
   const token = getToken()
-  return `/api/files/${id}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`
+  return apiUrl(`/api/files/${id}/download${token ? `?token=${encodeURIComponent(token)}` : ''}`)
 }
 
 /* ---------- shared types ---------- */
