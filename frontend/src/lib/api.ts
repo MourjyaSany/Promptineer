@@ -226,6 +226,13 @@ export interface BlockExplanation {
   recommendation: string
 }
 
+export interface ModelsInfo {
+  models: string[]
+  all_models: string[]
+  default: string
+  provider: string
+}
+
 export interface ChatResult {
   id: number
   blocked: boolean

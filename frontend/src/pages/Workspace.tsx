@@ -12,6 +12,7 @@ import Markdown from '../components/Markdown'
 import Pipeline from '../components/Pipeline'
 import {
   api, downloadFileUrl, uploadFiles, type ChatResult, type FileMeta,
+  type ModelsInfo,
 } from '../lib/api'
 import { useAuth } from '../store/auth'
 
@@ -57,6 +58,13 @@ function fileKindOf(name: string): string {
   return 'document'
 }
 
+function prettyModel(id: string) {
+  return id
+    .replace(/^gemini-/, 'Gemini ')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 function prettySize(bytes: number) {
   if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(1)} MB`
   return `${Math.max(1, Math.round(bytes / 1024))} KB`
@@ -78,6 +86,8 @@ export default function Workspace() {
   const [policyOpen, setPolicyOpen] = useState(false)
   const [copied, setCopied] = useState<number | null>(null)
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [modelChoice, setModelChoice] = useState('auto')
+  const [availableModels, setAvailableModels] = useState<string[]>([])
   const [dragging, setDragging] = useState(false)
   const [preview, setPreview] = useState<FileMeta | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -89,6 +99,15 @@ export default function Workspace() {
   }, [messages, thinking])
 
   useEffect(() => { setAttachments([]) }, [appKey])
+
+  useEffect(() => {
+    api.get<ModelsInfo>('/api/chat/models')
+      .then((info) => {
+        setAvailableModels(info.models)
+        setModelChoice((m) => (m === 'auto' || info.models.includes(m)) ? m : 'auto')
+      })
+      .catch(() => setAvailableModels([]))
+  }, [activePolicy?.id])
 
   const tokenEstimate = Math.max(1, Math.round(input.length / 4))
   const costEstimate = ((tokenEstimate / 1_000_000) * 5).toFixed(5)
@@ -158,6 +177,7 @@ export default function Workspace() {
         policy_id: activePolicy?.id,
         temperature,
         file_ids: ready.map((a) => a.meta!.id),
+        model: modelChoice === 'auto' ? null : modelChoice,
       })
       setLatest(result)
       setMessages((m) => [
@@ -537,6 +557,17 @@ export default function Workspace() {
                 >
                   <Paperclip size={14} />
                 </button>
+                <select
+                  value={modelChoice}
+                  onChange={(e) => setModelChoice(e.target.value)}
+                  title="Model — Auto lets the policy router pick by complexity"
+                  className="max-w-[160px] cursor-pointer rounded-lg border border-white/12 bg-white/6 px-2 py-1 text-[11px] text-ink-2 outline-none transition hover:border-brand-400 [&>option]:bg-[#101725]"
+                >
+                  <option value="auto">Auto (router)</option>
+                  {availableModels.map((m) => (
+                    <option key={m} value={m}>{prettyModel(m)}</option>
+                  ))}
+                </select>
                 <span className="flex items-center gap-1"><Coins size={11} /> ~{tokenEstimate} tok</span>
                 <span>${costEstimate}</span>
                 <span className="hidden items-center gap-1 sm:flex">

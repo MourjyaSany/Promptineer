@@ -22,6 +22,21 @@ class ChatBody(BaseModel):
     policy_id: int | None = None
     temperature: float = 0.5
     file_ids: list[int] = []
+    model: str | None = None   # explicit model choice; None ⇒ auto-route
+
+
+@router.get("/models")
+def models(user: User = Depends(get_current_user),
+           db: Session = Depends(get_db)):
+    """Models the current user may select, per their effective policy."""
+    policy = policy_engine.resolve(db, user, None)
+    settings = policy_engine.effective_settings(policy)
+    return {
+        "models": model_gateway.normalize_allowed(settings["allowed_models"]),
+        "all_models": model_gateway.MODEL_TIERS,
+        "default": model_gateway.DEFAULT_MODEL,
+        "provider": model_gateway.active_provider(),
+    }
 
 
 @router.post("")
@@ -69,13 +84,24 @@ def chat(body: ChatBody, user: User = Depends(get_current_user),
             "recommendation": "Forward optimized prompt", "time_ms": 1.2,
         }})
 
-    # 3. Model routing constrained by policy
-    model = model_gateway.route_model(opt["optimized"], settings["allowed_models"])
+    # 3. Model selection — user choice when permitted, else policy routing
+    allowed = model_gateway.normalize_allowed(settings["allowed_models"])
+    requested = model_gateway.normalize_model(body.model)
+    if requested and requested in allowed:
+        model = requested
+        route_reason = f"User selected {model} (permitted by policy)"
+    elif requested:
+        model = model_gateway.route_model(opt["optimized"], allowed)
+        route_reason = (f"Requested {requested} is not permitted by the "
+                        f"active policy; routed to {model} instead")
+    else:
+        model = model_gateway.route_model(opt["optimized"], allowed)
+        route_reason = f"Routed to {model} based on complexity and policy"
     stages.append({
         "name": "Model Router", "engine": model_gateway.active_provider(),
         "result": {
             "status": "pass", "confidence": 1.0,
-            "reason": f"Routed to {model} based on complexity and policy",
+            "reason": route_reason,
             "findings": [], "recommendation": model, "time_ms": 0.4,
         }})
 
