@@ -214,6 +214,7 @@ export interface Intelligence {
   engines: {
     rails: { framework: string; package_installed: boolean; llm_rails_active: boolean }
     optimizer: { engine: string; llmlingua_state: string; model: string }
+    pii?: { engine: string; package_installed: boolean; state: string; model: string | null }
     provider: string
   }
 }

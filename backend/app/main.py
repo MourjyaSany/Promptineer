@@ -10,7 +10,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from .routers import admin, auth_routes, chat, files, insights  # noqa: E402
 from .seed import ensure_schema, seed
-from .services import model_gateway, optimization, rails_engine
+from .services import model_gateway, optimization, pii_engine, rails_engine
 
 app = FastAPI(
     title="Promptineering API",
@@ -38,6 +38,7 @@ def startup():
     ensure_schema()
     seed()
     optimization.warm_up()   # background LLMLingua model load, never blocks
+    pii_engine.warm_up()     # background Presidio/spaCy load, never blocks
 
 
 @app.get("/api/health")
@@ -47,6 +48,7 @@ def health():
         "engines": {
             "rails": rails_engine.engine_info(),
             "optimizer": optimization.engine_info(),
+            "pii": pii_engine.engine_info(),
             "provider": model_gateway.active_provider(),
         },
     }

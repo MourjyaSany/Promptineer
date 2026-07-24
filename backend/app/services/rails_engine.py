@@ -18,6 +18,7 @@ import os
 import threading
 
 from .. import guardrails as g
+from . import pii_engine
 
 log = logging.getLogger("promptineering.rails")
 
@@ -27,11 +28,9 @@ _nemo_rails = None
 _nemo_state = "untried"   # untried | ready | unavailable
 _nemo_lock = threading.Lock()
 
+_NEMO_MODEL = "gemini-3.5-flash-lite"
+
 _NEMO_YAML = """
-models:
-  - type: main
-    engine: google_genai
-    model: gemini-3.5-flash-lite
 rails:
   input:
     flows:
@@ -69,13 +68,26 @@ def _get_nemo():
         if not NEMO_AVAILABLE or not gemini_key:
             _nemo_state = "unavailable"
             return None
-        # langchain-google-genai (used by NeMo's google_genai engine) reads
-        # GOOGLE_API_KEY, while the rest of the platform uses GEMINI_API_KEY
+        # langchain-google-genai reads GOOGLE_API_KEY, while the rest of
+        # the platform uses GEMINI_API_KEY
         os.environ.setdefault("GOOGLE_API_KEY", gemini_key)
         try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
             from nemoguardrails import LLMRails, RailsConfig
+
+            class _GeminiForNemo(ChatGoogleGenerativeAI):
+                """NeMo binds max_tokens per call; langchain-google-genai ≥4
+                only accepts max_output_tokens."""
+
+                def bind(self, **kwargs):
+                    if "max_tokens" in kwargs:
+                        kwargs.setdefault("max_output_tokens",
+                                          kwargs.pop("max_tokens"))
+                    return super().bind(**kwargs)
+
             config = RailsConfig.from_content(yaml_content=_NEMO_YAML)
-            _nemo_rails = LLMRails(config)
+            llm = _GeminiForNemo(model=_NEMO_MODEL, temperature=0.0)
+            _nemo_rails = LLMRails(config, llm=llm)
             _nemo_state = "ready"
             log.info("NeMo Guardrails runtime initialised")
         except Exception as exc:  # pragma: no cover - environment dependent
@@ -157,7 +169,9 @@ def run_input_rails(text: str, settings: dict) -> tuple[list[dict], str | None, 
                 blocked_reason = r["reason"]
 
     if guards.get("pii", True) and not blocked_reason:
-        r = add("PII Detection & Redaction", g.detect_pii(text))
+        r = pii_engine.detect_pii(text)
+        stages.append({"name": "PII Detection & Redaction",
+                       "engine": pii_engine.engine_tag(), "result": r})
         text = r.get("redacted", text)
     if guards.get("secrets", True) and not blocked_reason:
         r = add("Secret & Credential Masking", g.detect_secrets(text))
@@ -181,9 +195,20 @@ def run_output_rails(text: str, settings: dict) -> tuple[dict | None, str]:
     rails_cfg = settings.get("rails_config") or {}
     if not rails_cfg.get("output_rails", True):
         return None, text
-    result = g.validate_output(text)
-    stage = {"name": "Output Validation Rails", "engine": _engine_tag(),
-             "result": result}
+    pii = pii_engine.detect_pii(text)
+    if pii["status"] != "pass":
+        result = {"status": "warning", "confidence": pii["confidence"],
+                  "reason": "PII detected in model output and redacted",
+                  "findings": pii["findings"], "redacted": pii["redacted"],
+                  "recommendation": "Deliver redacted output",
+                  "time_ms": pii["time_ms"]}
+    else:
+        result = {"status": "pass", "confidence": 0.0,
+                  "reason": "Output passed moderation and PII checks",
+                  "findings": [], "redacted": text,
+                  "recommendation": "Deliver", "time_ms": pii["time_ms"]}
+    stage = {"name": "Output Validation Rails",
+             "engine": pii_engine.engine_tag(), "result": result}
     return stage, result.get("redacted", text)
 
 

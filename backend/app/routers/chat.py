@@ -10,7 +10,8 @@ from ..database import get_db
 from ..models import Application, PromptLog, UploadedFile, User, Violation, audit
 from ..optimizer import estimate_tokens
 from ..services import (
-    file_service, model_gateway, optimization, policy_engine, rails_engine,
+    file_service, model_gateway, optimization, pii_engine, policy_engine,
+    rails_engine,
 )
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -217,6 +218,7 @@ def chat(body: ChatBody, user: User = Depends(get_current_user),
             "engines": {
                 "rails": rails_engine.engine_info(),
                 "optimizer": optimization.engine_info(),
+                "pii": pii_engine.engine_info(),
                 "provider": model_gateway.active_provider(),
             },
         },
