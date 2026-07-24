@@ -104,9 +104,16 @@ npm run dev
    - the model name has no `(governed sandbox)` suffix,
    - compression metrics show original vs optimized tokens and est. savings.
 3. Confirm the pipeline order in the stage list:
-   `Policy → Injection → Jailbreak → PII → Secrets → (Financial) →
-   Compliance → Toxicity → Token Optimization → Model Router →
-   LLM Inference → Output Validation`.
+   `Injection → Jailbreak → PII (Presidio) → Secrets → (Financial) →
+   (NeMo Self-Check) → Compliance → Toxicity → Token Optimization →
+   Model Router → LLM Inference → Output Validation`.
+   Redaction runs **before** the NeMo self-check rail on purpose: the rail's
+   Gemini call only ever sees `[PERSON]` / `[SSN]`-style placeholders, never
+   raw PII.
+4. Pick a model explicitly from the composer dropdown (next to the attach
+   button) — the Model Router stage reports
+   `User selected <model> (permitted by policy)`; models outside your policy
+   are auto-routed instead.
 
 ## 6. Troubleshooting
 
@@ -117,7 +124,8 @@ npm run dev
 | `429` errors | Provider rate limit or no credit | Add billing/credits on the provider dashboard; retry later; route to a smaller tier via the policy's `allowed_models` |
 | CORS errors in the browser console | Frontend served from an origin the backend doesn't allow | In dev, always use http://localhost:5173 (the Vite proxy handles `/api`); for other origins add them to `allow_origins` in `backend/app/main.py` |
 | Key works in terminal but not the app | Key set in a different shell than the backend process | Set the variable in the same window that launches uvicorn, or use `backend/.env` |
-| NeMo self-check rail never runs | It requires `GEMINI_API_KEY` + `nemoguardrails` installed + `self_check` enabled in the policy's rails config | Check `GET /api/health` → `engines.rails` |
+| NeMo self-check rail never runs | It requires `GEMINI_API_KEY` + `nemoguardrails` + `langchain langchain-community langchain-google-genai` installed + `self_check` enabled in the policy's rails config | Check `GET /api/health` → `engines.rails.llm_rails_active` after sending one prompt under such a policy |
+| PII rail reports `native-regex` | Presidio not installed or spaCy model missing | `pip install presidio-analyzer presidio-anonymizer` + `python -m spacy download en_core_web_sm`, restart, check `engines.pii` |
 | First request very slow with full engines | LLMLingua model downloading in the background | Wait for `llmlingua_state: "ready"` in `/api/health`; native engine serves meanwhile |
 
 ## 7. Production notes

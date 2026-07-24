@@ -49,14 +49,20 @@ python3 -m venv .venv
 This lightweight install (~50 MB) runs the platform with the built-in native
 guardrail and optimizer engines.
 
-> **Optional — full ML engines (NeMo Guardrails + LLMLingua, several GB):**
-> only if you want real semantic compression and NeMo rail orchestration.
-> Keep this venv **outside** cloud-synced folders (OneDrive/Dropbox):
+> **Optional — full ML engines (NeMo Guardrails + LLMLingua + Presidio,
+> several GB):** only if you want real semantic compression, the
+> Gemini-judged NeMo self-check rail, and NER-based PII masking (person
+> names etc.). Keep this venv **outside** cloud-synced folders
+> (OneDrive/Dropbox):
 > ```bash
 > pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 > pip install --no-cache-dir llmlingua nemoguardrails
+> pip install --no-cache-dir langchain langchain-community langchain-google-genai
+> pip install --no-cache-dir presidio-analyzer presidio-anonymizer
+> python -m spacy download en_core_web_sm
 > ```
-> The app detects them automatically; nothing else changes.
+> The app detects them automatically; nothing else changes. Without them the
+> platform runs the same pipeline on its native regex/heuristic engines.
 
 ## Step 3 — Add your own API key (secrets file)
 
@@ -150,7 +156,11 @@ Open **http://localhost:5173**.
 
 Try pasting this into any workspace to watch the guardrails work:
 
-> My email is jane.doe@acme.com and my AWS key is AKIAIOSFODNN7EXAMPLE — please summarize our onboarding policy.
+> I am Jane Doe, my email is jane.doe@acme.com and my AWS key is AKIAIOSFODNN7EXAMPLE — please summarize our onboarding policy.
+
+You can also pick the Gemini model per prompt with the dropdown next to the
+attach button (`Auto (router)` lets the platform route by complexity; the
+list is limited to what your policy suite allows).
 
 ## Common issues
 

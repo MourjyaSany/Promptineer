@@ -4,20 +4,23 @@
 
 A full-stack platform that sits between your people and large language models:
 every prompt passes a multi-stage guardrail pipeline (NeMo Guardrails
-orchestration — injection, jailbreak, PII, secret, financial, compliance and
-toxicity rails), LLMLingua token compression, and a policy-aware multi-provider
-model gateway before inference — with enterprise file uploads, RBAC policy
-suites, complete analytics and an immutable audit trail.
+orchestration — injection, jailbreak, Presidio PII masking, secret, financial,
+LLM self-check, compliance and toxicity rails), LLMLingua token compression,
+and a policy-aware multi-provider model gateway before inference — with
+per-prompt model selection, enterprise file uploads, RBAC policy suites,
+complete analytics and an immutable audit trail.
 
 ```
-User → Policy Engine → NeMo Guardrails → LLMLingua → Model Gateway → LLM → Output Rails → UI
+User → Policy Engine → Rails (injection · jailbreak · Presidio PII · secrets
+     · NeMo LLM self-check · compliance · toxicity) → LLMLingua → Model Router
+     → Model Gateway → Gemini → Output Rails → UI
 ```
 
 ## Stack
 
 - **Frontend** — React 19 · Vite · TypeScript · TailwindCSS 4 · Framer Motion · Zustand · React Router · react-markdown · Lucide (custom canvas dotted globe + SVG chart kit)
 - **Backend** — Python · FastAPI · SQLAlchemy · SQLite · JWT auth · RBAC · modular service layer (policy engine, rails engine, optimization, model gateway, file service)
-- **Engines (optional, graceful fallback)** — NVIDIA NeMo Guardrails · LLMLingua-2 (torch CPU) · Gemini / OpenAI / Anthropic / OpenRouter via one unified gateway
+- **Engines (optional, graceful fallback)** — NVIDIA NeMo Guardrails (Gemini-backed LLM self-check) · Microsoft Presidio PII masking (spaCy NER) · LLMLingua-2 (torch CPU) · Gemini / OpenAI / Anthropic / OpenRouter via one unified gateway
 
 > Full setup: [SETUP.md](SETUP.md) · Provider keys: [AI_API_SETUP.md](AI_API_SETUP.md)
 
@@ -73,9 +76,10 @@ policy suite.
 
 ## Try the guardrails
 
-Paste this into any workspace to watch PII redaction + secret masking:
+Paste this into any workspace to watch Presidio PII redaction (including the
+person name, via NER) + secret masking:
 
-> My email is jane.doe@acme.com and my AWS key is AKIAIOSFODNN7EXAMPLE — please summarize our onboarding policy.
+> I am Jane Doe, my email is jane.doe@acme.com and my AWS key is AKIAIOSFODNN7EXAMPLE — please summarize our onboarding policy.
 
 And this to trigger a hard block:
 
@@ -92,6 +96,7 @@ backend/app
     rbac.py           # authority hierarchy + policy visibility
     policy_engine.py  # effective-policy resolution & enforcement
     rails_engine.py   # NeMo Guardrails orchestration + explainability
+    pii_engine.py     # Microsoft Presidio PII masking (native regex fallback)
     optimization.py   # LLMLingua-2 adapter (background warm-up, cost metrics)
     model_gateway.py  # unified Gemini/OpenAI/Anthropic/OpenRouter gateway
     file_service.py   # validated, hashed, policy-limited uploads
